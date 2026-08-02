@@ -57,3 +57,13 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## SQLite to MySQL Migration
+
+If you already have data in `database/database.sqlite`, you can copy it into MySQL after setting your `.env` to MySQL and running the schema migrations.
+
+1. Update `.env` to point at your MySQL database.
+2. Run `php artisan migrate --force`.
+3. Run `php artisan db:migrate-sqlite --source=database/database.sqlite`.
+
+The import copies application tables and skips framework/runtime tables such as `migrations`, `cache`, `jobs`, and `sessions`.
