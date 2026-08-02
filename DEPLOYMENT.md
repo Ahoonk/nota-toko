@@ -22,6 +22,7 @@ php artisan migrate --force
 php artisan db:seed --force
 npm install
 npm run build
+php artisan storage:link --force
 chmod +x deploy.sh
 ```
 

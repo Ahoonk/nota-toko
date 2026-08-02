@@ -17,6 +17,9 @@ npm install
 echo "Building frontend assets..."
 npm run build
 
+echo "Ensuring public storage link exists..."
+php artisan storage:link --force
+
 echo "Clearing and rebuilding Laravel caches..."
 php artisan config:clear
 php artisan route:clear
