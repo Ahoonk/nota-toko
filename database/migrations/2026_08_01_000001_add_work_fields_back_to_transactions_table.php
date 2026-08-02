@@ -12,7 +12,6 @@ return new class extends Migration
             $table->string('work_type')->nullable()->after('description');
             $table->string('work_location')->nullable()->after('work_type');
             $table->string('work_duration')->nullable()->after('work_location');
-            $table->foreignId('brought_item_id')->nullable()->after('work_duration')->constrained('items')->nullOnDelete();
 
             $table->index(['work_type', 'work_location']);
             $table->index('work_duration');
@@ -22,7 +21,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('brought_item_id');
             $table->dropIndex(['work_type', 'work_location']);
             $table->dropIndex(['work_duration']);
             $table->dropColumn(['work_type', 'work_location', 'work_duration']);
