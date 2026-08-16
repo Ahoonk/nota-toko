@@ -123,6 +123,9 @@
 
         <nav class="nav flex-column gap-2">
             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+            @if (auth()->user()?->isAdmin())
+            <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}"><i class="bi bi-person-gear me-2"></i>User</a>
+            @endif
             <a class="nav-link {{ request()->routeIs('companies.*') ? 'active' : '' }}" href="{{ route('companies.index') }}"><i class="bi bi-building me-2"></i>Perusahaan</a>
             <a class="nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}"><i class="bi bi-people me-2"></i>Pelanggan</a>
             <a class="nav-link {{ request()->routeIs('item-categories.*') ? 'active' : '' }}" href="{{ route('item-categories.index') }}"><i class="bi bi-tags me-2"></i>Jenis Barang</a>
@@ -151,6 +154,10 @@
     <main class="flex-grow-1 p-3 p-lg-4">
         @if (session('status'))
             <div class="alert alert-success glass-card">{{ session('status') }}</div>
+        @endif
+
+        @if (session('error'))
+            <div class="alert alert-danger glass-card">{{ session('error') }}</div>
         @endif
 
         @yield('content')

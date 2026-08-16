@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\MasterDataController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,13 @@ Route::post('/logout', [SessionController::class, 'destroy'])->middleware('auth'
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    Route::get('/users', [UserController::class, 'index'])->middleware('role:admin')->name('users.index');
+    Route::get('/users/create', [UserController::class, 'create'])->middleware('role:admin')->name('users.create');
+    Route::post('/users', [UserController::class, 'store'])->middleware('role:admin')->name('users.store');
+    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->middleware('role:admin')->name('users.edit');
+    Route::put('/users/{user}', [UserController::class, 'update'])->middleware('role:admin')->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('role:admin')->name('users.destroy');
 
     foreach (['companies', 'customers', 'item-categories', 'units', 'items'] as $resource) {
         Route::get("/{$resource}", [MasterDataController::class, 'index'])->name("{$resource}.index");
