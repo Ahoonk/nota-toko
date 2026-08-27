@@ -41,8 +41,19 @@ class PdfTemplateService
         try {
             $pageCount = $pdf->setSourceFile($templatePath);
         } catch (Throwable $e) {
+            logger()->error('Failed to read PDF template source file.', [
+                'transaction_id' => $transaction->id,
+                'transaction_number' => $transaction->transaction_number,
+                'document_type' => $documentType,
+                'template_id' => $template->id,
+                'template_path' => $template->template_path,
+                'template_file' => $templatePath,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             throw new RuntimeException(
-                "Template {$documentType} gagal dibaca. Periksa file PDF yang diunggah.",
+                "Template {$documentType} gagal dibaca. Periksa file PDF yang diunggah. Detail: ".$e->getMessage(),
                 previous: $e
             );
         }
