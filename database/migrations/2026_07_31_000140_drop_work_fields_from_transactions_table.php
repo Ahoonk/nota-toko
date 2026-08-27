@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('transactions', function (Blueprint $table) {
             $table->dropColumn(['work_type', 'work_location', 'work_duration']);
         });

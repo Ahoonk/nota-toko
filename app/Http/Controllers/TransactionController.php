@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use RuntimeException;
 
 class TransactionController extends Controller
 {
@@ -213,7 +214,14 @@ class TransactionController extends Controller
     {
         abort_unless(array_key_exists($type, config('nota_toko.document_types')), 404);
         $preview = str_contains($request->route()?->getName() ?? '', 'preview');
-        $result = $pdfTemplateService->render($transaction->load(['company', 'customer', 'details']), $type, $preview);
+
+        try {
+            $result = $pdfTemplateService->render($transaction->load(['company', 'customer', 'details']), $type, $preview);
+        } catch (RuntimeException $e) {
+            report($e);
+
+            abort(422, $e->getMessage());
+        }
 
         if (! $preview) {
             $transaction->forceFill([

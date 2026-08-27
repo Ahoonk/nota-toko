@@ -12,27 +12,15 @@ use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\RoundBlockSizeMode;
 use RuntimeException;
+use Throwable;
 use setasign\Fpdi\Fpdi;
 
 class PdfTemplateService
 {
     public function render(Transaction $transaction, string $documentType, bool $preview = false): array
     {
-        $template = DocumentTemplate::query()
-            ->where('company_id', $transaction->company_id)
-            ->where('document_type', $documentType)
-            ->where('is_active', true)
-            ->latest('id')
-            ->first();
-
-        if (! $template) {
-            throw new RuntimeException("Template {$documentType} belum diunggah.");
-        }
-
+        $template = $this->resolveTemplate($transaction, $documentType);
         $templatePath = Storage::disk('public')->path($template->template_path);
-        if (! is_file($templatePath)) {
-            throw new RuntimeException("File template untuk {$documentType} tidak ditemukan.");
-        }
 
         $outputName = sprintf(
             '%s/%s-%s-%s.pdf',
@@ -49,21 +37,43 @@ class PdfTemplateService
         $pdf->SetMargins(0, 0, 0);
         $pdf->SetAutoPageBreak(false, 0);
         $pdf->SetCompression(false);
-        $pageCount = $pdf->setSourceFile($templatePath);
 
-        for ($page = 1; $page <= $pageCount; $page++) {
-            $templateId = $pdf->importPage($page);
-            $size = $pdf->getTemplateSize($templateId);
-            $orientation = ($size['width'] ?? 0) > ($size['height'] ?? 0) ? 'L' : 'P';
-            $pdf->AddPage($orientation, [$size['width'], $size['height']]);
-            $pdf->useTemplate($templateId);
-
-            if ($page === 1) {
-                $this->writeFixedLayout($pdf, $transaction, (float) ($size['width'] ?? 210.11), (float) ($size['height'] ?? 150.14));
-            }
+        try {
+            $pageCount = $pdf->setSourceFile($templatePath);
+        } catch (Throwable $e) {
+            throw new RuntimeException(
+                "Template {$documentType} gagal dibaca. Periksa file PDF yang diunggah.",
+                previous: $e
+            );
         }
 
-        $pdf->Output('F', $outputPath);
+        try {
+            for ($page = 1; $page <= $pageCount; $page++) {
+                $templateId = $pdf->importPage($page);
+                $size = $pdf->getTemplateSize($templateId);
+                $orientation = ($size['width'] ?? 0) > ($size['height'] ?? 0) ? 'L' : 'P';
+                $pdf->AddPage($orientation, [$size['width'], $size['height']]);
+                $pdf->useTemplate($templateId);
+
+                if ($page === 1) {
+                    $this->writeFixedLayout($pdf, $transaction, (float) ($size['width'] ?? 210.11), (float) ($size['height'] ?? 150.14));
+                }
+            }
+        } catch (Throwable $e) {
+            throw new RuntimeException(
+                "Template {$documentType} tidak sesuai dengan layout transaksi ini.",
+                previous: $e
+            );
+        }
+
+        try {
+            $pdf->Output('F', $outputPath);
+        } catch (Throwable $e) {
+            throw new RuntimeException(
+                "Gagal membuat file PDF {$documentType}.",
+                previous: $e
+            );
+        }
 
         PrintLog::create([
             'transaction_id' => $transaction->id,
@@ -85,6 +95,51 @@ class PdfTemplateService
             'path' => $outputPath,
             'file_name' => basename($outputPath),
         ];
+    }
+
+    protected function resolveTemplate(Transaction $transaction, string $documentType): DocumentTemplate
+    {
+        $query = DocumentTemplate::query()
+            ->where('document_type', $documentType)
+            ->where('is_active', true)
+            ->latest('id');
+
+        $template = (clone $query)
+            ->where('company_id', $transaction->company_id)
+            ->first();
+
+        if ($template) {
+            $this->assertTemplateFileExists($template, $documentType);
+
+            return $template;
+        }
+
+        $fallback = $query->first();
+
+        if ($fallback) {
+            logger()->warning('Falling back to a template from a different company.', [
+                'transaction_id' => $transaction->id,
+                'transaction_company_id' => $transaction->company_id,
+                'document_type' => $documentType,
+                'template_company_id' => $fallback->company_id,
+                'template_id' => $fallback->id,
+            ]);
+
+            $this->assertTemplateFileExists($fallback, $documentType);
+
+            return $fallback;
+        }
+
+        throw new RuntimeException("Template {$documentType} belum diunggah untuk perusahaan ini.");
+    }
+
+    protected function assertTemplateFileExists(DocumentTemplate $template, string $documentType): void
+    {
+        $templatePath = Storage::disk('public')->path($template->template_path);
+
+        if (! is_file($templatePath)) {
+            throw new RuntimeException("File template untuk {$documentType} tidak ditemukan.");
+        }
     }
 
     protected function writeFixedLayout(Fpdi $pdf, Transaction $transaction, float $pageWidth, float $pageHeight): void
