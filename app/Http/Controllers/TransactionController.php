@@ -220,7 +220,13 @@ class TransactionController extends Controller
         } catch (RuntimeException $e) {
             report($e);
 
-            abort(422, $e->getMessage());
+            return response()->view('errors.document-preview', [
+                'message' => $e->getMessage(),
+                'transaction' => $transaction,
+                'type' => $type,
+                'documentLabel' => config('nota_toko.document_types')[$type] ?? $type,
+                'preview' => $preview,
+            ], 422);
         }
 
         if (! $preview) {
